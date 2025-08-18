@@ -1,0 +1,168 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #f6f6f6;
+  --card: rgba(11, 60, 93, 0.1);
+  --card-foreground: #f6f6f6;
+  --popover: rgba(0, 0, 0, 0.8);
+  --popover-foreground: #f6f6f6;
+  --primary: #328cc1;
+  --primary-foreground: #f6f6f6;
+  --secondary: rgba(50, 140, 193, 0.2);
+  --secondary-foreground: #f6f6f6;
+  --muted: rgba(50, 140, 193, 0.1);
+  --muted-foreground: rgba(246, 246, 246, 0.7);
+  --accent: #145214;
+  --accent-foreground: #f6f6f6;
+  --destructive: #ef4444;
+  --destructive-foreground: #f6f6f6;
+  --border: rgba(50, 140, 193, 0.2);
+  --input: rgba(50, 140, 193, 0.1);
+  --ring: #328cc1;
+  --chart-1: #328cc1;
+  --chart-2: #145214;
+  --chart-3: #0b3c5d;
+  --chart-4: #f6f6f6;
+  --chart-5: rgba(50, 140, 193, 0.5);
+  --radius: 0.625rem;
+  --sidebar: rgba(11, 60, 93, 0.2);
+  --sidebar-foreground: #f6f6f6;
+  --sidebar-primary: #328cc1;
+  --sidebar-primary-foreground: #f6f6f6;
+  --sidebar-accent: rgba(20, 82, 20, 0.2);
+  --sidebar-accent-foreground: #f6f6f6;
+  --sidebar-border: rgba(50, 140, 193, 0.2);
+  --sidebar-ring: #328cc1;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #f6f6f6;
+  --card: rgba(11, 60, 93, 0.1);
+  --card-foreground: #f6f6f6;
+  --popover: rgba(0, 0, 0, 0.8);
+  --popover-foreground: #f6f6f6;
+  --primary: #328cc1;
+  --primary-foreground: #f6f6f6;
+  --secondary: rgba(50, 140, 193, 0.2);
+  --secondary-foreground: #f6f6f6;
+  --muted: rgba(50, 140, 193, 0.1);
+  --muted-foreground: rgba(246, 246, 246, 0.7);
+  --accent: #145214;
+  --accent-foreground: #f6f6f6;
+  --destructive: #ef4444;
+  --destructive-foreground: #f6f6f6;
+  --border: rgba(50, 140, 193, 0.2);
+  --input: rgba(50, 140, 193, 0.1);
+  --ring: #328cc1;
+  --chart-1: #328cc1;
+  --chart-2: #145214;
+  --chart-3: #0b3c5d;
+  --chart-4: #f6f6f6;
+  --chart-5: rgba(50, 140, 193, 0.5);
+  --sidebar: rgba(11, 60, 93, 0.2);
+  --sidebar-foreground: #f6f6f6;
+  --sidebar-primary: #328cc1;
+  --sidebar-primary-foreground: #f6f6f6;
+  --sidebar-accent: rgba(20, 82, 20, 0.2);
+  --sidebar-accent-foreground: #f6f6f6;
+  --sidebar-border: rgba(50, 140, 193, 0.2);
+  --sidebar-ring: #328cc1;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom glassmorphism effects */
+.glass {
+  background: rgba(11, 60, 93, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(50, 140, 193, 0.2);
+}
+
+/* Smooth animations */
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hover effects */
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(50, 140, 193, 0.3);
+  transform: scale(1.02);
+  transition: all 0.3s ease;
+}
