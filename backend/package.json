@@ -16,7 +16,8 @@
     "test:blockchain": "node test-blockchain.js",
     "test:database": "node test-database.js",
     "test:db-quick": "node quick-test-db.js",
-    "lint": "eslint src/**/*.ts"
+    "lint": "eslint src/**/*.ts",
+    "install:legacy": "npm install --legacy-peer-deps"
   },
   "dependencies": {
     "@prisma/client": "^6.14.0",
