@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { useRouter } from "next/navigation"
-import { EmailService, MapboxService } from "@/lib/api-services"
+import { AlertService, MapboxService } from "@/lib/api-services"
 import {
   Users,
   Trophy,
@@ -44,19 +44,11 @@ export default function CommunityPage() {
 
     if (emailNotifications) {
       try {
-        await EmailService.sendAlert(
-          "community@ecochain.org",
-          "New Community Post",
-          `
-          <h2>New Environmental Impact Update</h2>
-          <p>A community member has shared a new update:</p>
-          <blockquote style="border-left: 4px solid #328CC1; padding-left: 16px; margin: 16px 0;">
-            ${newPost}
-          </blockquote>
-          <p>Join the conversation on the EcoChain platform!</p>
-          <a href="${window.location.origin}/community" style="background: #328CC1; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">View Post</a>
-          `,
-        )
+        await AlertService.sendProjectAlert(
+          "New Community Post Created",
+          `A community member has shared a new environmental impact update: "${newPost.substring(0, 100)}${newPost.length > 100 ? '...' : ''}"`,
+          "low"
+        );
       } catch (error) {
         console.error("Failed to send community notification:", error)
       }

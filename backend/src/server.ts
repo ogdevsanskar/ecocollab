@@ -10,9 +10,13 @@ import aiChatRoutes from './routes/ai-chat';
 import environmentalDataRoutes from './routes/environmental-data';
 import blockchainRoutes from './routes/blockchain';
 import databaseRoutes from './routes/database';
+import alertRoutes from './routes/alerts';
+import projectRoutes from './routes/projects';
+import monitoringRoutes from './routes/monitoring';
 
 // Import database config
 import { initializeDatabase } from './config/database-config';
+import { MonitoringService } from './services/monitoring-service';
 
 // Load environment variables
 dotenv.config();
@@ -54,6 +58,9 @@ app.use('/api/ai-chat', aiChatRoutes);
 app.use('/api/environmental-data', environmentalDataRoutes);
 app.use('/api/blockchain', blockchainRoutes);
 app.use('/api/database', databaseRoutes);
+app.use('/api/alerts', alertRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/monitoring', monitoringRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -97,6 +104,15 @@ app.listen(PORT, () => {
       console.error('🔥 Failed to initialize database:', error);
       console.log('⚠️  Server will continue running without database features');
     });
+
+  // Start automated monitoring system
+  try {
+    MonitoringService.startMonitoring(30); // Check every 30 minutes
+    console.log('🔍 Automated environmental monitoring started');
+  } catch (error) {
+    console.error('⚠️  Failed to start monitoring system:', error);
+    console.log('🔧 Monitoring can be started manually via /api/monitoring/start');
+  }
 });
 
 export default app;

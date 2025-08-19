@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { useRouter } from "next/navigation"
+import { AlertService } from "@/lib/api-services"
 import {
   Search,
   Plus,
@@ -33,16 +34,35 @@ export default function ProjectsPage() {
   const [loadMoreCount, setLoadMoreCount] = useState(12)
   const router = useRouter()
 
-  const handleCreateProject = () => {
-    alert(
-      "Project creation form would open here. This connects to the collaboration system for multi-stakeholder project setup.",
-    )
+  const handleCreateProject = async () => {
+    try {
+      // Trigger project alert for new project creation
+      await AlertService.sendProjectAlert(
+        "New Project Creation Request",
+        "A new environmental project creation has been initiated. Multi-stakeholder collaboration setup required.",
+        "medium"
+      );
+      alert("Project creation initiated! Stakeholders have been notified via SMS/call alerts for collaboration setup.");
+    } catch (error) {
+      console.error("Failed to initiate project creation:", error);
+      alert("Project creation form would open here. This connects to the collaboration system for multi-stakeholder project setup.");
+    }
   }
 
-  const handleViewProject = (projectId: number) => {
-    alert(
-      `Opening detailed view for project ${projectId}. This would show full project details, milestones, funding history, and collaboration tools.`,
-    )
+  const handleViewProject = async (projectId: number) => {
+    try {
+      // Log project view activity
+      await AlertService.sendProjectAlert(
+        "Project View Activity",
+        `Project ${projectId} is being viewed. Detailed analytics and milestone tracking accessed.`,
+        "low",
+        projectId.toString()
+      );
+      alert(`Opening detailed view for project ${projectId}. This would show full project details, milestones, funding history, and collaboration tools.`);
+    } catch (error) {
+      console.error("Failed to log project view:", error);
+      alert(`Opening detailed view for project ${projectId}. This would show full project details, milestones, funding history, and collaboration tools.`);
+    }
   }
 
   const handleFavoriteProject = (projectId: number) => {

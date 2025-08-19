@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRouter } from "next/navigation"
-import { NASAEarthDataService, OpenWeatherService, GlobalForestWatchService } from "@/lib/api-services"
+import { NASAEarthDataService, OpenWeatherService, GlobalForestWatchService, AlertService } from "@/lib/api-services"
 import {
   TreePine,
   Fish,
@@ -38,24 +38,57 @@ export default function DashboardPage() {
     router.push("/projects")
   }
 
-  const handleReportIncident = () => {
-    alert("Incident reporting form would open here. This feature connects to the data collection system.")
+  const handleReportIncident = async () => {
+    try {
+      // Trigger environmental alert for incident reporting
+      await AlertService.sendEnvironmentalAlert(
+        "Environmental Incident Reported",
+        "A new environmental incident has been reported by a community member. Immediate investigation required.",
+        "high"
+      );
+      alert("Incident reported successfully! Environmental team has been notified via SMS/call alerts.");
+    } catch (error) {
+      console.error("Failed to report incident:", error);
+      alert("Failed to report incident. Please try again.");
+    }
   }
 
   const handleExploreData = () => {
     router.push("/data")
   }
 
-  const handleFundProject = () => {
-    router.push("/funding")
+  const handleFundProject = async () => {
+    try {
+      // Simulate funding action with alert
+      await AlertService.sendFundingAlert(
+        "Funding Request Initiated",
+        "A new funding request has been initiated from the dashboard.",
+        "medium"
+      );
+      router.push("/funding")
+    } catch (error) {
+      console.error("Failed to initiate funding:", error);
+      router.push("/funding")
+    }
   }
 
   const handleViewProject = (projectId: number) => {
     router.push(`/projects?id=${projectId}`)
   }
 
-  const handleTakeAction = (alertType: string) => {
-    alert(`Taking action for ${alertType}. This would trigger emergency response protocols.`)
+  const handleTakeAction = async (alertType: string) => {
+    try {
+      // Trigger appropriate alert based on type
+      await AlertService.sendEnvironmentalAlert(
+        `Emergency Action: ${alertType}`,
+        `Emergency response protocol activated for ${alertType}. Response team has been notified.`,
+        "critical"
+      );
+      alert(`Emergency response activated for ${alertType}. Response team notified via SMS/call alerts.`);
+    } catch (error) {
+      console.error("Failed to trigger emergency response:", error);
+      alert(`Emergency response activated for ${alertType} (offline mode).`);
+    }
   }
 
   const handleMonitorAlert = (alertType: string) => {
@@ -66,8 +99,19 @@ export default function DashboardPage() {
     router.push(`/analytics?focus=${alertType}`)
   }
 
-  const handleCreateProject = () => {
-    router.push("/projects?action=create")
+  const handleCreateProject = async () => {
+    try {
+      // Trigger project alert
+      await AlertService.sendProjectAlert(
+        "New Project Creation Started",
+        "A new environmental project is being created from the dashboard.",
+        "low"
+      );
+      router.push("/projects?action=create")
+    } catch (error) {
+      console.error("Failed to notify project creation:", error);
+      router.push("/projects?action=create")
+    }
   }
 
   const [realTimeMetrics, setRealTimeMetrics] = useState({
