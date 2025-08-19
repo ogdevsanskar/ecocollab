@@ -216,6 +216,102 @@ export class AlertService {
   }
 
   /**
+   * Send environmental alert
+   */
+  static async sendEnvironmentalAlert(
+    title: string,
+    message: string,
+    severity: 'low' | 'medium' | 'high' | 'critical',
+    location?: { lat: number; lng: number; name?: string }
+  ): Promise<{ success: boolean; broadcast?: { success: number; failed: number; total: number } }> {
+    const alert = this.createEnvironmentalAlert(title, message, severity, location);
+    const recipients = [
+      {
+        name: 'Environmental Monitor',
+        phone: '+1234567890',
+        email: 'monitor@ecochain.org',
+        alertTypes: ['environmental', 'project'],
+        preferredMethod: 'both' as const
+      }
+    ];
+    
+    const broadcast = await this.broadcastAlert(recipients, alert);
+    return { success: true, broadcast };
+  }
+
+  /**
+   * Send funding alert
+   */
+  static async sendFundingAlert(
+    title: string,
+    message: string,
+    severity: 'low' | 'medium' | 'high' | 'critical',
+    projectId?: string
+  ): Promise<{ success: boolean; broadcast?: { success: number; failed: number; total: number } }> {
+    const alert = this.createFundingAlert(title, message, severity, projectId);
+    const recipients = [
+      {
+        name: 'Project Manager',
+        phone: '+1234567891',
+        email: 'pm@ecochain.org',
+        alertTypes: ['project', 'funding'],
+        preferredMethod: 'sms' as const
+      }
+    ];
+    
+    const broadcast = await this.broadcastAlert(recipients, alert);
+    return { success: true, broadcast };
+  }
+
+  /**
+   * Send project alert
+   */
+  static async sendProjectAlert(
+    title: string,
+    message: string,
+    severity: 'low' | 'medium' | 'high' | 'critical',
+    projectId?: string,
+    location?: { lat: number; lng: number; name?: string }
+  ): Promise<{ success: boolean; broadcast?: { success: number; failed: number; total: number } }> {
+    const alert = this.createProjectAlert(title, message, severity, projectId, location);
+    const recipients = [
+      {
+        name: 'Project Manager',
+        phone: '+1234567891',
+        email: 'pm@ecochain.org',
+        alertTypes: ['project', 'funding'],
+        preferredMethod: 'sms' as const
+      }
+    ];
+    
+    const broadcast = await this.broadcastAlert(recipients, alert);
+    return { success: true, broadcast };
+  }
+
+  /**
+   * Send security alert
+   */
+  static async sendSecurityAlert(
+    title: string,
+    message: string,
+    severity: 'low' | 'medium' | 'high' | 'critical'
+  ): Promise<{ success: boolean; broadcast?: { success: number; failed: number; total: number } }> {
+    const alert = this.createSecurityAlert(title, message, severity);
+    const recipients = [
+      {
+        name: 'Security Team',
+        phone: '+1234567892',
+        email: 'security@ecochain.org',
+        alertTypes: ['security', 'funding'],
+        preferredMethod: 'call' as const
+      }
+    ];
+    
+    const broadcast = await this.broadcastAlert(recipients, alert);
+    return { success: true, broadcast };
+  }
+
+  /**
    * Create environmental alert
    */
   static createEnvironmentalAlert(

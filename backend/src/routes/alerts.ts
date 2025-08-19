@@ -286,7 +286,7 @@ router.post('/trigger-conditions', async (req: Request, res: Response) => {
     }
 
     // Send all triggered alerts
-    const results = [];
+    const results: { alert: string; result: { success: number; failed: number; total: number } }[] = [];
     for (const alert of triggeredAlerts) {
       const recipients = mockRecipients.filter(r => r.alertTypes.includes(alert.type));
       const result = await AlertService.broadcastAlert(recipients, alert);
