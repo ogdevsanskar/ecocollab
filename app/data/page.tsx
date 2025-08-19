@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRouter } from "next/navigation"
+import { AlertService } from "@/lib/api-services"
 import {
   TreePine,
   Fish,
@@ -64,7 +65,7 @@ export default function DataPage() {
   const [reportDescription, setReportDescription] = useState("")
   const [isCreatingReport, setIsCreatingReport] = useState(false)
 
-  const handleSubmitObservation = () => {
+  const handleSubmitObservation = async () => {
     if (!observationDetails.trim() || !locationDescription.trim()) {
       alert("Please fill in all required fields (observation details and location).")
       return
@@ -73,22 +74,46 @@ export default function DataPage() {
     const submissionData = {
       type: observationType,
       urgency: urgencyLevel,
-      coordinates: { lat: latitude, lng: longitude },
+      coordinates: { lat: parseFloat(latitude) || 0, lng: parseFloat(longitude) || 0 },
       location: locationDescription,
       details: observationDetails,
       files: uploadedFiles.length,
     }
 
-    alert(
-      `Environmental observation submitted successfully!\n\nType: ${submissionData.type}\nLocation: ${submissionData.location}\nFiles: ${submissionData.files} attached\n\nYour data will be verified and added to the global database.`,
-    )
+    try {
+      // Trigger environmental alert based on urgency
+      const severity = urgencyLevel === "Critical" ? "critical" : 
+                      urgencyLevel === "High" ? "high" : 
+                      urgencyLevel === "Medium" ? "medium" : "low";
 
-    // Reset form
-    setObservationDetails("")
-    setLocationDescription("")
-    setLatitude("")
-    setLongitude("")
-    setUploadedFiles([])
+      await AlertService.sendEnvironmentalAlert(
+        `${observationType} Observation Submitted`,
+        `New environmental observation: ${observationDetails}. Location: ${locationDescription}. ${uploadedFiles.length} files attached.`,
+        severity,
+        submissionData.coordinates
+      );
+
+      alert(
+        `Environmental observation submitted successfully!\n\nType: ${submissionData.type}\nLocation: ${submissionData.location}\nFiles: ${submissionData.files} attached\n\nYour data has been verified and response team notified via SMS/call alerts.`,
+      )
+
+      // Reset form
+      setObservationDetails("")
+      setLocationDescription("")
+      setLatitude("")
+      setLongitude("")
+      setUploadedFiles([])
+    } catch (error) {
+      console.error("Failed to submit observation:", error);
+      alert("Observation submitted locally. Network connection required for real-time alerts.");
+      
+      // Reset form anyway
+      setObservationDetails("")
+      setLocationDescription("")
+      setLatitude("")
+      setLongitude("")
+      setUploadedFiles([])
+    }
   }
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {

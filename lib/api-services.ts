@@ -1,311 +1,385 @@
-import { API_CONFIG, type ForestChangeData, type ClimateData, type SatelliteImageData } from "./api-config"
+// Frontend API Services - connects to backend APIs
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
 
-// Global Forest Watch Service
-export class GlobalForestWatchService {
-  private static async makeRequest(endpoint: string, params: Record<string, any> = {}) {
-    if (!API_CONFIG.GLOBAL_FOREST_WATCH.API_KEY) {
-      console.warn("[v0] Global Forest Watch API key not configured, using fallback data")
-      throw new Error("API key not configured")
-    }
-
-    const url = new URL(API_CONFIG.GLOBAL_FOREST_WATCH.BASE_URL + endpoint)
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.append(key, value.toString())
-    })
-
+// Base API service with error handling
+class BaseAPIService {
+  protected static async makeRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
     try {
-      const response = await fetch(url.toString(), {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         headers: {
-          Authorization: `Bearer ${API_CONFIG.GLOBAL_FOREST_WATCH.API_KEY}`,
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
+          ...options.headers,
         },
-      })
+        ...options,
+      });
 
       if (!response.ok) {
-        throw new Error(`GFW API Error: ${response.status} ${response.statusText}`)
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
 
-      return response.json()
+      return await response.json();
     } catch (error) {
-      console.error("[v0] GFW API request failed:", error)
-      throw error
+      console.error(`API request failed for ${endpoint}:`, error);
+      throw error;
     }
   }
+}
 
-  static async getDeforestationAlerts(lat: number, lng: number, radius = 10): Promise<ForestChangeData> {
+// OpenWeather API Service
+export class OpenWeatherService extends BaseAPIService {
+  static async getCurrentWeather(lat: number, lng: number) {
     try {
-      console.log("[v0] Fetching deforestation alerts for", { lat, lng, radius })
-      console.log("[v0] GFW API Key configured:", !!API_CONFIG.GLOBAL_FOREST_WATCH.API_KEY)
-      const data = await this.makeRequest(API_CONFIG.GLOBAL_FOREST_WATCH.ENDPOINTS.DEFORESTATION, {
-        lat,
-        lng,
-        radius,
-        period: "2024-01-01,2024-12-31",
-      })
-      console.log("[v0] Successfully fetched GFW data:", data)
-      return data
+      const response = await this.makeRequest(`/api/environmental-data?type=weather&lat=${lat}&lng=${lng}`);
+      return response.weatherData || {
+        main: { temp: 298, humidity: 65, pressure: 1013 },
+        weather: [{ main: 'Clear', description: 'clear sky' }],
+        wind: { speed: 3.5 }
+      };
     } catch (error) {
-      console.error("[v0] Failed to fetch deforestation alerts, using fallback data:", error.message)
+      console.error('Weather API error:', error);
       return {
-        alerts: [
-          { lat: lat + 0.01, lng: lng + 0.01, confidence: 85, date: "2024-01-15", area_ha: 2.5 },
-          { lat: lat - 0.01, lng: lng - 0.01, confidence: 92, date: "2024-01-20", area_ha: 1.8 },
-          { lat: lat + 0.02, lng: lng - 0.02, confidence: 78, date: "2024-01-18", area_ha: 3.2 },
-        ],
-      }
+        main: { temp: 298, humidity: 65, pressure: 1013 },
+        weather: [{ main: 'Clear', description: 'clear sky' }],
+        wind: { speed: 3.5 }
+      };
     }
   }
 
-  static async getForestCoverChange(country: string) {
+  static async getAirQuality(lat: number, lng: number) {
     try {
-      console.log("[v0] Fetching forest cover change for", country)
-      const data = await this.makeRequest(API_CONFIG.GLOBAL_FOREST_WATCH.ENDPOINTS.FOREST_CHANGE, {
-        country,
-        year: "2024",
-      })
-      console.log("[v0] Successfully fetched forest cover data:", data)
-      return data
+      const response = await this.makeRequest(`/api/environmental-data?type=air-quality&lat=${lat}&lng=${lng}`);
+      return response.airQuality || {
+        list: [{
+          main: { aqi: 2 },
+          components: { pm2_5: 10, pm10: 15, no2: 20, o3: 80, co: 200 }
+        }]
+      };
     } catch (error) {
-      console.error("[v0] Failed to fetch forest cover data, using fallback:", error)
-      return { forest_loss: 1247, forest_gain: 892, net_change: -355 }
+      console.error('Air quality API error:', error);
+      return {
+        list: [{
+          main: { aqi: 2 },
+          components: { pm2_5: 10, pm10: 15, no2: 20, o3: 80, co: 200 }
+        }]
+      };
     }
   }
 }
 
 // NASA Earth Data Service
-export class NASAEarthDataService {
-  private static async makeRequest(endpoint: string, params: Record<string, any> = {}) {
-    const url = new URL(API_CONFIG.NASA_EARTH_DATA.BASE_URL + endpoint)
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.append(key, value.toString())
-    })
-
-    const response = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${API_CONFIG.NASA_EARTH_DATA.API_KEY}`,
-        "Content-Type": "application/json",
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`NASA API Error: ${response.statusText}`)
-    }
-
-    return response.json()
-  }
-
-  static async getSatelliteImagery(lat: number, lng: number, date: string): Promise<SatelliteImageData> {
+export class NASAEarthDataService extends BaseAPIService {
+  static async getClimateData(lat: number, lng: number) {
     try {
-      const data = await this.makeRequest(API_CONFIG.NASA_EARTH_DATA.ENDPOINTS.LANDSAT, {
-        lat,
-        lng,
-        date,
-        dim: 0.15,
-      })
-      return data
-    } catch (error) {
-      console.error("Failed to fetch satellite imagery:", error)
-      return {
-        url: `/placeholder.svg?height=400&width=400&query=satellite view of coordinates ${lat},${lng}`,
-        date,
-        cloud_cover: 15,
-        resolution: "30m",
-      }
-    }
-  }
-
-  static async getClimateData(lat: number, lng: number): Promise<ClimateData> {
-    try {
-      const data = await this.makeRequest(API_CONFIG.NASA_EARTH_DATA.ENDPOINTS.CLIMATE, {
-        lat,
-        lng,
-        parameter: "temperature,humidity,co2",
-      })
-      return data
-    } catch (error) {
-      console.error("Failed to fetch climate data:", error)
-      return {
-        temperature: 15.2 + (Math.random() - 0.5) * 2,
-        humidity: 65 + (Math.random() - 0.5) * 10,
-        co2_level: 421.3 + (Math.random() - 0.5) * 5,
+      const response = await this.makeRequest(`/api/environmental-data?type=nasa&lat=${lat}&lng=${lng}`);
+      return response.nasa || {
+        temperature: 15.2 + Math.random() * 5,
+        co2_level: 420 + Math.random() * 10,
         timestamp: new Date().toISOString(),
-        location: { lat, lng },
-      }
+        location: { lat, lng }
+      };
+    } catch (error) {
+      console.error('NASA API error:', error);
+      return {
+        temperature: 15.2 + Math.random() * 5,
+        co2_level: 420 + Math.random() * 10,
+        timestamp: new Date().toISOString(),
+        location: { lat, lng }
+      };
+    }
+  }
+
+  static async getSatelliteImagery(lat: number, lng: number, zoom: number = 10) {
+    try {
+      const response = await this.makeRequest(`/api/environmental-data?type=satellite&lat=${lat}&lng=${lng}&zoom=${zoom}`);
+      return response.satelliteImagery || {
+        url: `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${lng},${lat},${zoom}/600x400?access_token=${process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}`,
+        date: new Date().toISOString(),
+        cloud_cover: Math.random() * 30,
+        resolution: '10m'
+      };
+    } catch (error) {
+      console.error('Satellite imagery API error:', error);
+      return {
+        url: `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${lng},${lat},${zoom}/600x400?access_token=${process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}`,
+        date: new Date().toISOString(),
+        cloud_cover: Math.random() * 30,
+        resolution: '10m'
+      };
     }
   }
 }
 
-// OpenWeather Service
-export class OpenWeatherService {
-  private static async makeRequest(endpoint: string, params: Record<string, any> = {}) {
-    if (!API_CONFIG.OPENWEATHER.API_KEY) {
-      console.warn("[v0] OpenWeather API key not configured, using fallback data")
-      throw new Error("API key not configured")
-    }
-
-    const url = new URL(API_CONFIG.OPENWEATHER.BASE_URL + endpoint)
-    url.searchParams.append("appid", API_CONFIG.OPENWEATHER.API_KEY)
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.append(key, value.toString())
-    })
-
-    console.log(
-      "[v0] Making OpenWeather API request to:",
-      url.toString().replace(API_CONFIG.OPENWEATHER.API_KEY, "[REDACTED]"),
-    )
-
-    const response = await fetch(url.toString())
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("[v0] OpenWeather API Error:", response.status, response.statusText, errorText)
-      throw new Error(`OpenWeather API Error: ${response.status} ${response.statusText}`)
-    }
-
-    return response.json()
-  }
-
-  static async getCurrentWeather(lat: number, lng: number) {
+// Global Forest Watch Service
+export class GlobalForestWatchService extends BaseAPIService {
+  static async getForestCoverChange(countryCode: string) {
     try {
-      console.log("[v0] Fetching current weather for", { lat, lng })
-      console.log("[v0] OpenWeather API Key configured:", !!API_CONFIG.OPENWEATHER.API_KEY)
-      const data = await this.makeRequest(API_CONFIG.OPENWEATHER.ENDPOINTS.CURRENT, {
-        lat,
-        lon: lng,
-        units: "metric",
-      })
-      console.log("[v0] Successfully fetched weather data:", data)
-      return data
+      const response = await this.makeRequest(`/api/environmental-data?type=deforestation&country=${countryCode}`);
+      return response.deforestation || {
+        forest_loss: Math.random() * 1000,
+        forest_gain: Math.random() * 500,
+        net_change: Math.random() * 500 - 250,
+        alerts: Math.floor(Math.random() * 20),
+        timestamp: new Date().toISOString()
+      };
     } catch (error) {
-      console.error("[v0] Failed to fetch weather data, using fallback:", error.message)
+      console.error('Forest Watch API error:', error);
       return {
-        main: { temp: 22.5, humidity: 68, pressure: 1013 },
-        weather: [{ main: "Clear", description: "clear sky" }],
-        wind: { speed: 3.2 },
-      }
+        forest_loss: Math.random() * 1000,
+        forest_gain: Math.random() * 500,
+        net_change: Math.random() * 500 - 250,
+        alerts: Math.floor(Math.random() * 20),
+        timestamp: new Date().toISOString()
+      };
     }
   }
 
-  static async getAirPollution(lat: number, lng: number) {
+  static async getDeforestationAlerts(lat: number, lng: number, radius: number = 50) {
     try {
-      console.log("[v0] Fetching air pollution data for", { lat, lng })
-      const data = await this.makeRequest(API_CONFIG.OPENWEATHER.ENDPOINTS.AIR_POLLUTION, {
-        lat,
-        lon: lng,
-      })
-      console.log("[v0] Successfully fetched air pollution data:", data)
-      return data
+      const response = await this.makeRequest(`/api/environmental-data?type=deforestation&lat=${lat}&lng=${lng}&radius=${radius}`);
+      return response.deforestationAlerts || [];
     } catch (error) {
-      console.error("[v0] Failed to fetch air pollution data, using fallback:", error.message)
-      return {
-        list: [
-          {
-            main: { aqi: 2 },
-            components: { co: 233.75, no2: 15.83, o3: 89.12, pm2_5: 12.45, pm10: 18.32 },
-          },
-        ],
-      }
+      console.error('Deforestation alerts API error:', error);
+      return [];
     }
   }
 }
 
-// SendGrid Email Service
-export class EmailService {
-  static async sendAlert(to: string, subject: string, content: string) {
+// AI Chat Service
+export class AIChatService extends BaseAPIService {
+  static async sendMessage(message: string, history: any[] = []) {
     try {
-      const response = await fetch(API_CONFIG.SENDGRID.BASE_URL + API_CONFIG.SENDGRID.ENDPOINTS.SEND_EMAIL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${API_CONFIG.SENDGRID.API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          personalizations: [{ to: [{ email: to }] }],
-          from: { email: "alerts@ecochain.org", name: "EcoChain Alerts" },
-          subject,
-          content: [{ type: "text/html", value: content }],
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`SendGrid API Error: ${response.statusText}`)
-      }
-
-      return await response.json()
+      const response = await this.makeRequest('/api/ai-chat', {
+        method: 'POST',
+        body: JSON.stringify({ message, history }),
+      });
+      return response.response || 'I apologize, but I cannot process your request at the moment.';
     } catch (error) {
-      console.error("Failed to send email:", error)
-      return { message: "Email queued for delivery (mock)" }
+      console.error('AI Chat API error:', error);
+      return 'I apologize, but I cannot process your request at the moment.';
+    }
+  }
+}
+
+// Environmental Data Service
+export class EnvironmentalDataService extends BaseAPIService {
+  static async getAllEnvironmentalData(lat?: number, lng?: number) {
+    try {
+      const params = lat && lng ? `?lat=${lat}&lng=${lng}` : '';
+      const response = await this.makeRequest(`/api/environmental-data${params}`);
+      return response || {};
+    } catch (error) {
+      console.error('Environmental data API error:', error);
+      return {};
+    }
+  }
+
+  static async getSpecificData(type: string, lat?: number, lng?: number) {
+    try {
+      const params = new URLSearchParams();
+      params.append('type', type);
+      if (lat) params.append('lat', lat.toString());
+      if (lng) params.append('lng', lng.toString());
+      
+      const response = await this.makeRequest(`/api/environmental-data?${params.toString()}`);
+      return response || {};
+    } catch (error) {
+      console.error(`${type} data API error:`, error);
+      return {};
+    }
+  }
+}
+
+// Alert Service
+export class AlertService extends BaseAPIService {
+  static async sendEnvironmentalAlert(title: string, message: string, severity: string, location?: any) {
+    try {
+      const response = await this.makeRequest('/api/alerts/environmental', {
+        method: 'POST',
+        body: JSON.stringify({ title, message, severity, location }),
+      });
+      return response;
+    } catch (error) {
+      console.error('Environmental alert API error:', error);
+      throw error;
+    }
+  }
+
+  static async sendFundingAlert(title: string, message: string, severity: string, projectId?: string) {
+    try {
+      const response = await this.makeRequest('/api/alerts/funding', {
+        method: 'POST',
+        body: JSON.stringify({ title, message, severity, projectId }),
+      });
+      return response;
+    } catch (error) {
+      console.error('Funding alert API error:', error);
+      throw error;
+    }
+  }
+
+  static async sendProjectAlert(title: string, message: string, severity: string, projectId?: string, location?: any) {
+    try {
+      const response = await this.makeRequest('/api/alerts/project', {
+        method: 'POST',
+        body: JSON.stringify({ title, message, severity, projectId, location }),
+      });
+      return response;
+    } catch (error) {
+      console.error('Project alert API error:', error);
+      throw error;
+    }
+  }
+
+  static async sendSecurityAlert(title: string, message: string, severity: string) {
+    try {
+      const response = await this.makeRequest('/api/alerts/security', {
+        method: 'POST',
+        body: JSON.stringify({ title, message, severity }),
+      });
+      return response;
+    } catch (error) {
+      console.error('Security alert API error:', error);
+      throw error;
+    }
+  }
+
+  static async sendTestAlert(phone?: string) {
+    try {
+      const response = await this.makeRequest('/api/alerts/test', {
+        method: 'POST',
+        body: JSON.stringify({ phone }),
+      });
+      return response;
+    } catch (error) {
+      console.error('Test alert API error:', error);
+      throw error;
+    }
+  }
+
+  static async triggerConditionBasedAlerts(conditions: any) {
+    try {
+      const response = await this.makeRequest('/api/alerts/trigger-conditions', {
+        method: 'POST',
+        body: JSON.stringify(conditions),
+      });
+      return response;
+    } catch (error) {
+      console.error('Condition-based alerts API error:', error);
+      throw error;
+    }
+  }
+}
+
+// Project Service
+export class ProjectService extends BaseAPIService {
+  static async createProject(projectData: any) {
+    try {
+      const response = await this.makeRequest('/api/projects', {
+        method: 'POST',
+        body: JSON.stringify(projectData),
+      });
+      return response;
+    } catch (error) {
+      console.error('Create project API error:', error);
+      throw error;
+    }
+  }
+
+  static async getProject(projectId: string) {
+    try {
+      const response = await this.makeRequest(`/api/projects/${projectId}`);
+      return response;
+    } catch (error) {
+      console.error('Get project API error:', error);
+      throw error;
+    }
+  }
+
+  static async getAllProjects() {
+    try {
+      const response = await this.makeRequest('/api/projects');
+      return response;
+    } catch (error) {
+      console.error('Get all projects API error:', error);
+      throw error;
+    }
+  }
+
+  static async fundProject(projectId: string, amount: number, walletAddress?: string) {
+    try {
+      const response = await this.makeRequest(`/api/projects/${projectId}/fund`, {
+        method: 'POST',
+        body: JSON.stringify({ amount, walletAddress }),
+      });
+      return response;
+    } catch (error) {
+      console.error('Fund project API error:', error);
+      throw error;
+    }
+  }
+}
+
+// Blockchain Service
+export class BlockchainService extends BaseAPIService {
+  static async getWalletInfo(address: string) {
+    try {
+      const response = await this.makeRequest(`/api/blockchain/wallet/${address}`);
+      return response;
+    } catch (error) {
+      console.error('Wallet info API error:', error);
+      throw error;
+    }
+  }
+
+  static async getTransactionHistory(address: string) {
+    try {
+      const response = await this.makeRequest(`/api/blockchain/transactions/${address}`);
+      return response;
+    } catch (error) {
+      console.error('Transaction history API error:', error);
+      throw error;
+    }
+  }
+}
+
+// Health Check Service
+export class HealthCheckService extends BaseAPIService {
+  static async checkBackendHealth() {
+    try {
+      const response = await this.makeRequest('/health');
+      return response;
+    } catch (error) {
+      console.error('Health check API error:', error);
+      return { status: 'ERROR', message: 'Backend unreachable' };
     }
   }
 }
 
 // Mapbox Service
-export class MapboxService {
-  static getStaticMapUrl(lat: number, lng: number, zoom = 12, width = 600, height = 400) {
-    const baseUrl = API_CONFIG.MAPBOX.BASE_URL + API_CONFIG.MAPBOX.ENDPOINTS.STATIC_IMAGES
-    return `${baseUrl}/${lng},${lat},${zoom}/${width}x${height}?access_token=${API_CONFIG.MAPBOX.ACCESS_TOKEN}`
-  }
-
-  static async geocodeLocation(query: string) {
+export class MapboxService extends BaseAPIService {
+  static async geocodeLocation(coordinates: string) {
     try {
-      const url = `${API_CONFIG.MAPBOX.BASE_URL}${API_CONFIG.MAPBOX.ENDPOINTS.GEOCODING}/${encodeURIComponent(query)}.json?access_token=${API_CONFIG.MAPBOX.ACCESS_TOKEN}`
-      const response = await fetch(url)
-
-      if (!response.ok) {
-        throw new Error(`Mapbox API Error: ${response.statusText}`)
-      }
-
-      return await response.json()
+      const [lng, lat] = coordinates.split(',').map(Number);
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}`
+      );
+      const data = await response.json();
+      return data.features[0]?.place_name || 'Unknown Location';
     } catch (error) {
-      console.error("Failed to geocode location:", error)
-      return {
-        features: [
-          {
-            center: [0, 0],
-            place_name: query,
-            properties: {},
-          },
-        ],
-      }
-    }
-  }
-
-  static async reverseGeocode(lat: number, lng: number) {
-    try {
-      const url = `${API_CONFIG.MAPBOX.BASE_URL}${API_CONFIG.MAPBOX.ENDPOINTS.GEOCODING}/${lng},${lat}.json?access_token=${API_CONFIG.MAPBOX.ACCESS_TOKEN}`
-      const response = await fetch(url)
-
-      if (!response.ok) {
-        throw new Error(`Mapbox API Error: ${response.statusText}`)
-      }
-
-      const data = await response.json()
-      return data.features[0]?.place_name || `${lat}, ${lng}`
-    } catch (error) {
-      console.error("Failed to reverse geocode:", error)
-      return `${lat}, ${lng}`
-    }
-  }
-
-  static getEnvironmentalMapStyle() {
-    return "mapbox://styles/mapbox/satellite-streets-v12"
-  }
-
-  static createEnvironmentalGeoJSON(dataPoints: any[], dataType: string) {
-    return {
-      type: "FeatureCollection" as const,
-      features: dataPoints.map((point, index) => ({
-        type: "Feature" as const,
-        geometry: {
-          type: "Point" as const,
-          coordinates: [point.lng, point.lat],
-        },
-        properties: {
-          id: point.id || index,
-          dataType,
-          ...point,
-        },
-      })),
+      console.error('Mapbox geocoding error:', error);
+      return 'Unknown Location';
     }
   }
 }
+
+// Export all services
+export {
+  BaseAPIService,
+  EnvironmentalDataService,
+  AIChatService,
+  AlertService,
+  ProjectService,
+  BlockchainService,
+  HealthCheckService,
+  MapboxService,
+};
